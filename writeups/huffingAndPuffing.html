@@ -13,14 +13,112 @@
             <div class = "container">
                 <header class="terminal-header">
                     <div class="prompt-container">
-                        <span class="prompt">adi-adi</span>
+                        <span class="prompt">Huffing And Puffing</span>
                     </div>
                 </header>
                 <section id="main_content">
                     <div class="prompt-container">
-                        <span class="prompt"><h1>Huffing And Puffing</h1></span>
-                        <span class="prompt"><h3 href="https://crackmes.one/crackme/66c748a4b899a3b9dd02adbe">You can find the crackme here. (https://crackmes.one/crackme/66c748a4b899a3b9dd02adbe)</h3></span>
+                        <span class="prompt"><h3> <a href="https://crackmes.one/crackme/66c748a4b899a3b9dd02adbe">You can find the crackme here. </a></h3></span>
                     </div>
+                    <h1>Introduction</h1>
+                    <p>When we run this program, it shows us the encoded flag, we pass the a string into the encoder, and get our input but encoded. The goal of this challenge seems to be to get the encoded flag and the encoded input to match by passing the original flag into the program.</p>
+                    <img src="../assets/images/hnp1.png">
+                    <p>So let's open up Ghidra and figure out how this works!</p>
+                    <h1></h1>
+                    <h1>Code Structure</h1>
+                    <p>We should get dropped into main. And if we look past the code where the input is captured, we can see;</p>
+                    <p>A giant dictionary is made,</p>
+                    <img src="../assets/images/hnp2.png">
+                    <p>The input string then is encoded with a Huffman tree,</p>
+                    <img src="../assets/images/hnp3.png">
+                    <p>The encoded string is then converted into a rectangular binary matrix with width equal to the largest prime factor of the encoded string (filling it column by column),</p>
+                    <img src="../assets/images/hnp4.png">
+                    <p>And finally, each column of the matrix is printed an integer.</p>
+                    <img src="../assets/images/hnp5.png">
+                    <h1></h1>
+                    <h1>Huffman Tree</h1>
+                    <p>The crux of this challenge is the Huffman tree, if you don't know what that is you can read more about it <span><a href="https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/">here</a></span>. </p>
+                    <p>But the gist of it that the Huffman tree creates binary codes that replace each character in a string based on frequency.</p>
+                    <p>And from the function header of the buildHuffmanTree function, we know that the giant dictionary is actually the frequency map for the tree</p>
+                    <p>This is the full map with the keys being the charcters, and the values being frequency of them in the flag</p>
+                    <blockquote>'5' -> 0x31<br>
+                        'R' -> 0x31<br>
+                        'n' -> 0x31<br>
+                        'K' -> 0x31<br>
+                        '4' -> 0x31<br>
+                        'C' -> 0x31<br>
+                        'T' -> 0x32<br>
+                        'I' -> 0x32<br>
+                        '0' -> 0x31<br>
+                        'u' -> 0x31<br>
+                        'F' -> 0x31<br>
+                        'M' -> 0x31<br>
+                        '{' -> 0x31<br>
+                        '_' -> 0x31<br>
+                        'H' -> 0x31<br>
+                        '}' -> 0x31<br>
+                        'f' -> 0x32<br>
+                        'm' -> 0x31</blockquote>
+                    <p>Let's assume that they don't actually use each character at least 49 times in the flag, and that they meant the ASCII codes for the numbers.</p>
+                    <p>That leaves us with</p>
+                    <blockquote>'5' -> 1<br>
+                        'R' -> 1<br>
+                        'n' -> 1<br>
+                        'K' -> 1<br>
+                        '4' -> 1<br>
+                        'C' -> 1<br>
+                        'T' -> 2<br>
+                        'I' -> 2<br>
+                        '0' -> 1<br>
+                        'u' -> 1<br>
+                        'F' -> 1<br>
+                        'M' -> 1<br>
+                        '{' -> 1<br>
+                        '_' -> 1<br>
+                        'H' -> 1<br>
+                        '}' -> 1<br>
+                        'f' -> 2<br>
+                        'm' -> 1</blockquote>
+                    <p>Or the characters: 5RnK4CTTII0uFM{_H}ffm</p>
+                    <p>From here we could brute force the flag with some guessing and knowledge of common CTF flag syntax. But that sounds annoying and against the spirit of the challenge, so let's actually decode the flag.</p>
+                    <h1></h1>
+                    <h1>Flag Decoding</h1>
+                    <p>The last piece of info we need are the codes generated by the Huffman tree. We can't simply run frequency map into an algorithm implementation that we've made ourselves as the codes would be slightly different depending on the compilation due to having so many characters with the same frequency. So we need to get the codes from the program itself.</p>
+                    <p>To do this I attached x32Dbg onto the program and bp'd at file offset (insert offset here), and got the code for each character from EDX</p>
+                    <img src="../assets/images/hnp6.png">
+                    <p>Doing this for each character we should get the codes:</p>
+                    <blockquote>R -> 0000<br>
+                        n -> 0001<br>
+                        M -> 0010<br>
+                        C -> 0011<br>
+                        F -> 0100<br>
+                        5 -> 0101<br>
+                        m -> 0110<br>
+                        } -> 0111<br>
+                        H -> 1000<br>
+                        _ -> 1001<br>
+                        u -> 1010<br>
+                        T -> 1011<br>
+                        f -> 1100<br>
+                        I -> 1101<br>
+                        0 -> 11100<br>
+                        { -> 11101<br>
+                        4 -> 11110<br>
+                        K -> 11111</blockquote>
+                    <p>Ok now to for real start decoding the flag.</p>
+                    <p>We can start by reverting the encoded flag back into binary</p>
+                    <p>1773 1166 1693 1110 795 1561 115 1879</p>
+                    <p>11011101101 10010001110 11010011101 10001010110 1100011011 11000011001 1110011 11101010111</p>
+                    <p>But an important thing to remember is that these binary numbers originally came from the columns of a rectangular matrix. So that means each one of these binary numbers should be the same length.</p>
+                    <p>We can pad zeros on the front of shorter numbers to make them equally sized.</p>
+                    <p>11011101101 10010001110 11010011101 10001010110 01100011011 11000011001 00001110011 11101010111</p>
+                    <p>We then can treat this as one string and break it up into the codes</p>
+                    <p>1101110110110010001110110100111011000101011001100011011110000110010000111001111101010111</p>
+                    <p>1101 1101 1011 0010 0011 1011 0100 11101 1000 1010 1100 1100 0110 11110 0001 1001 0000 11100 11111 0101 0111</p>
+                    <p>Finally we get the flag by translating the codes back into ASCII using the code table that we found</p>
+                    <p>I I T M C T F { H u f f m 4 n _ R 0 K 5 }</p>
+                    <p>IITMCTF{Huffm4n_R0K5}</p>
+                    <img src="../assets/images/hnp7.png">
                 </section>
             </div>
             
