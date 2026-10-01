@@ -190,8 +190,8 @@ with py7zr.SevenZipFile('minaHaSkin.7z', 'w') as archive:
                 <p> The vulnerability has been reported to DLMM and has been patched for version 2.0.0. The path traversal in <code>sevenz-rust</code> has been reported to RustSec and has been given the advisory <a href="https://rustsec.org/advisories/RUSTSEC-2026-0245.html">RUSTSEC-2026-0245</a></p>
                 <p>The thing that stuck out to me during this process was how the DLMM team clearly anticipated this happened and tried to put in measures, but those measures were completely paradoxical. The docstring saying that the validation was done before extraction placed directly next to a comment saying the validation was after, and the validation checking for extractions outside a folder by only checking said folder. The most probable explanation would be that this section was vibe coded and wasn't properly reviewed. This is my hesitation about vibe coding, not that the generated code won't work, but because it tempts the viber not to fully understand said code because it "works" and then potentially letting dangerous things caused by the AI slip by.</p>
                 <p>But this exploit was only possible because of a vulnerable library made before AI, so maybe we shouldn't trust the humans with coding either.</p>
-                <p><i>Does path traversal count as apotheosis?</i></p>
                 <hr>
+                <p style="text-align: center;"><i>Does path traversal count as apotheosis?</i></p>
                 <div class="prompt-container">
                     <span class="prompt"><h3> <a href="#top">Back to top</a></h3></span>
                 </div>
