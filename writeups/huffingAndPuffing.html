@@ -48,11 +48,28 @@
                 border: 1px solid #444;
                 margin: 15px 0;
             }
+
+            /* Bright pink page title and the bar beneath it */
+            .terminal-header {
+                border-bottom-color: #f01dc8;
+            }
+            .terminal-header .prompt {
+                color: #f01dc8;
+            }
+            .container {
+                padding-bottom: 24px;
+            }
+            #main_content {
+                margin-bottom: 0;
+            }
+            #main_content > .prompt-container:last-child h3 {
+                margin: 0;
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <header class="terminal-header">
+            <header class="terminal-header" id="top">
                 <div class="prompt-container">
                     <span class="prompt">Huffing And Puffing</span>
                 </div>
@@ -101,6 +118,11 @@
                 <p><b>IITMCTF{Huffm4n_R0K5}</b></p>
                 <img src="../assets/images/hnp7.png">
                 <p>They match!</p>
+                <hr>
+                <p style="text-align: center;"><i>I should get back into jogging</i></p>
+                <div class="prompt-container">
+                    <span class="prompt"><h3> <a href="#top">Back to top</a></h3></span>
+                </div>
             </section>
         </div>
     </body>
