@@ -101,9 +101,11 @@
         "Could not determine archive format".to_string(),
       )),
     }?;</code></pre>
-                <h2>Primer on archives</h2>
+                <hr>
+                <h1>Primer on archives</h1>
                 <p>The specifics depends from format to format, but archives boil down to a list of compressed data and the paths to they get written to. These paths are relative within the extraction directory (e.g. <code>./homework/essayfinal.docx</code> gets extracted to <code>extraction_folder/homework/essayfinal.docx</code>). It is up to the archive extractor to verify that those paths aren't pointing outside the extraction directory (e.g. <code>../evil.exe</code> or <code>C:\Temp\hidden.txt</code>).</p>
-                <h2>extract_7z</h2>
+                <hr>
+                <h1>extract_7z</h1>
                 <p>The sub-extraction functions iterate through each file individually and checks if the file path is inside the the extraction directly. The exception is <code>extract_7z</code>, as the library they used to extract 7z archives, <code>sevenz-rust</code>, is unable to process files singularly. To work around this limitation, DLMM says they "validate that the output directory is properly sandboxed by the calling code before extraction."</p>
                 <pre><code>sevenz_rust::decompress_file(
   archive_path.to_string_lossy().as_ref(),
@@ -125,7 +127,8 @@ self.validate_extracted_files(output_dir)?;</code></pre>
   }</code></pre>
                 <p>They check if any files were extracted outside the target directory by recursively checking files... in the target directory. Effectively pointless.</p>
                 <p> We now know that there is no efficacious validation for 7z archives by DLMM, but it doesn't matter if we can't escape the extraction directory from the <code>sevenz_rust::decompress_file</code> call.</p>
-                <h2>sevenz-rust</h2>
+                <hr>
+                <h1>sevenz-rust</h1>
                 <p>Searching online for vulnerabilities gave nothing for <code>sevenz-rust</code> directly, but there was a <a href="https://intel.aikido.dev/cve/AIKIDO-2026-428616">zip slip vulnerability posting</a> for <code>sevenz-rust2</code>. <code>sevenz-rust2</code> was a library made by some contributors after <code>sevenz-rust</code> got abandoned. I had a hunch that <code>sevenz-rust</code>might have the same or similar zip slip vuln, as something of that magnitude would likely be a carry over from the original library rather than something being introduced in a new version.</p>
                 <p>Looking at the source code of <code>sevenz-rust</code>, we can see that the logic pertaining to extraction is in <code>de_funcs.rs::decompress_impl</code>.</p>
                 <p>We can see that the extraction loop inside the function blindly joins the two paths together and passes it into <code>extract_fn</code>. <code>extract_fn</code> is a supplied argument from <code>decompress_impl</code> and defaults to <code>default_entry_extract_fn</code>.</p>
