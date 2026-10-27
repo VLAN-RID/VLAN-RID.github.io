@@ -95,11 +95,11 @@
                 <img src="../assets/images/sevenzipthumb.png" alt="Seven Does a Zip Slip" style="display: block; width: 100%; box-sizing: border-box; margin: 0 0 30px;">
                 <h1>Introduction</h1>
                 <p>Recently my friends got me hopelessly addicted to Valve's latest hit of digital heroin called Deadlock. One of the first things they showed me was Deadlock Mod Manager (DLMM). It allowed for their games to become borderline unrecognizable with the amount of copyrighted characters on screen. The only mod I ever downloaded was the one that turns all the character icons into cats, but I still often browse through its mod store to see what cool stuff people have made.</p>
-                <p>Modding has always had a fraught relationship with security as it boils down running potentially harmful files from unknown sources, but I was curious if it was possible for a bad actor to take control of a computer via the mod manager without even running a mod. </p>
+                <p>Modding has always had a fraught relationship with security, as it boils down to running potentially harmful files from unknown sources, but I was curious if it was possible for a bad actor to take control of a computer via the mod manager without even running a mod. </p>
                 <hr>
                 <h1>The Loading </h1>
                 <p>The code for the mod manager backend is in <code>apps/desktop/src-tauri/src/mod_manager</code>.</p>
-                <p>I wanted to investigate the mod extraction logic as that is when the manager first interacts with a mod on disk, but before that mod is actually ran. At which point the user has agreed to run the harmful code said mod could have (always think before you run mods kids). </p>
+                <p>I wanted to investigate the mod extraction logic, as that is when the manager first interacts with a mod on disk, but before that mod is actually ran. At which point the user has agreed to run the harmful code said mod could have (always think before you run mods kids). </p>
                 <p>The extraction code lies in <code>archive_extractor.rs::extract_archive</code>. The function matches the archive formats zip, rar, and 7z and calls a sub-extraction function to handle each case.</p>
                 <pre><code>    match archive_path.extension().and_then(|e| e.to_str()) {
       Some("zip") =&gt; self.extract_zip(archive_path, output_dir),
