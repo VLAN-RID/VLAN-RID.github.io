@@ -11,11 +11,26 @@
 
             <style>
                 /* Backing box matching the writeup pages */
+                /* Stretch the box down to the bottom of the window */
+                .container {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                    box-sizing: border-box;
+                    padding-bottom: 70px;
+                }
+                #main_content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    margin-bottom: 0;
+                }
                 .content-box {
+                    flex: 1;
                     background-color: #1e1e1e;
                     color: #f68fff;
                     padding: 40px 40px 24px;
-                    margin-bottom: 20px;
+                    margin-bottom: 0;
                     font-family: 'Courier New', Courier, monospace;
                 }
                 .content-box a {
@@ -24,6 +39,12 @@
                 }
                 .content-box a:hover {
                     text-decoration: underline;
+                }
+                /* Short description under each writeup entry */
+                .content-box .entry-desc {
+                    font-size: 20px;
+                    margin-top: -8px;
+                    margin-bottom: 28px;
                 }
                 .content-box > :first-child {
                     margin-top: 0;
@@ -50,9 +71,9 @@
 
                         </p>
                         <h1 id="seven-does-a-zip-slip"> (10/26/2026)   <a href="./writeups/sevenDoesAZipSlip.html"> Seven Does a Zip Slip</a></h1>
-                        <p>RCE in Deadlock Mod Manager</p>
+                        <p class="entry-desc">RCE in Deadlock Mod Manager</p>
                         <h1 id="huffing-and-puffing"> (9/24/2024)   <a href="./writeups/huffingAndPuffing.html"> Huffing And Puffing</a></h1>
-                        <p>A very fun crackme I found</p>
+                        <p class="entry-desc">A very fun crackme I found</p>
                     </div>
                 </section>
             </div>
