@@ -8,6 +8,30 @@
             <meta name="theme-color" content="#151515">
             <meta name="msapplication-navbutton-color" content="#151515">
             <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+            <style>
+                /* Backing box matching the writeup pages */
+                .content-box {
+                    background-color: #1e1e1e;
+                    color: #f68fff;
+                    padding: 40px 40px 24px;
+                    margin-bottom: 20px;
+                    font-family: 'Courier New', Courier, monospace;
+                }
+                .content-box a {
+                    color: #4affff;
+                    text-decoration: none;
+                }
+                .content-box a:hover {
+                    text-decoration: underline;
+                }
+                .content-box > :first-child {
+                    margin-top: 0;
+                }
+                .content-box > :last-child {
+                    margin-bottom: 0;
+                }
+            </style>
         </head>
         <body>
             <div class = "container">
@@ -17,14 +41,19 @@
                     </div>
                 </header>
                 <section id="main_content">
-                    <p>
-                        heya! I'm adi. 
-                    </p>
-                    <p>
-                        This blog is mainly for writeups on ctfs, malware, or game hacking stuff. I might post some other interesting stuff too.
-                    </p>
-                    <h1 id="huffing-and-puffing"> (9/24/2024)   <a href="./writeups/huffingAndPuffing.html"> Huffing And Puffing</a></h1>
-                    <p>A very fun crackme I found</p>
+                    <div class="content-box">
+                        <p>
+                            heya! I'm adi. 
+                        </p>
+                        <p>
+                            This blog is mainly for writeups on ctfs, malware, or game hacking stuff. I might post some other interesting stuff too.
+
+                        </p>
+                        <h1 id="seven-does-a-zip-slip"> (10/26/2026)   <a href="./writeups/sevenDoesAZipSlip.html"> Seven Does a Zip Slip</a></h1>
+                        <p>RCE in Deadlock Mod Manager</p>
+                        <h1 id="huffing-and-puffing"> (9/24/2024)   <a href="./writeups/huffingAndPuffing.html"> Huffing And Puffing</a></h1>
+                        <p>A very fun crackme I found</p>
+                    </div>
                 </section>
             </div>
             
